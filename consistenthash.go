@@ -1,9 +1,8 @@
 package consistenthashing
 
 import (
-	"bytes"
-	"crypto/sha256"
-	"encoding/binary"
+	"hash/crc32"
+	"strconv"
 )
 
 type HashFunction func([]byte) uint
@@ -27,9 +26,12 @@ func NewConsistentHash[T Hash](replicate uint, opts ...ConsistentHashOption[T]) 
 		replicate: replicate,
 		circle:    NewSortedMap[uint, T](),
 		hash: func(b []byte) uint {
-			hash := sha256.Sum256(b)
-			slice := hash[:]
-			return uint(binary.LittleEndian.Uint64(slice))
+			if len(b) < 64 {
+				var scratch [64]byte
+				copy(scratch[:], b)
+				return uint(crc32.ChecksumIEEE(scratch[:len(b)]))
+			}
+			return uint(crc32.ChecksumIEEE([]byte(b)))
 		},
 	}
 
@@ -54,9 +56,10 @@ func (s *ConsistentHash[T]) Remove(node T) {
 	}
 }
 
-func (s *ConsistentHash[T]) Get(key uint) *T {
+func (s *ConsistentHash[T]) Get(key uint) T {
 	if s.circle.Empty() {
-		return nil
+		var noop T
+		return noop
 	}
 	hash := s.hash(intToBytes(key))
 
@@ -71,13 +74,6 @@ func (s *ConsistentHash[T]) Get(key uint) *T {
 	return s.circle.Get(hash)
 }
 
-func intToBytes[T Unsigned](num T) []byte {
-	buff := new(bytes.Buffer)
-	bigOrLittleEndian := binary.LittleEndian
-	err := binary.Write(buff, bigOrLittleEndian, uint64(num))
-	if err != nil {
-		panic(err)
-	}
-
-	return buff.Bytes()
+func intToBytes(num uint) []byte {
+	return []byte(strconv.Itoa(int(num)))
 }

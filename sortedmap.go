@@ -1,9 +1,5 @@
 package consistenthashing
 
-import (
-	"bytes"
-)
-
 type Unsigned interface {
 	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
 }
@@ -39,11 +35,12 @@ func (s *SortedMap[K, T]) Remove(key K) {
 	}
 }
 
-func (s *SortedMap[K, T]) Get(key K) *T {
+func (s *SortedMap[K, T]) Get(key K) T {
 	if v, ok := s.dic[key]; ok {
-		return &v
+		return v
 	}
-	return nil
+	var noop T
+	return noop
 }
 
 func (s *SortedMap[K, T]) Contains(key K) bool {
@@ -59,20 +56,20 @@ func (s *SortedMap[K, T]) Empty() bool {
 	return len(s.arr) == 0
 }
 
-func (s *SortedMap[K, T]) First() *T {
+func (s *SortedMap[K, T]) First() T {
 	if len(s.arr) > 0 {
 		k := s.arr[0]
 		v := s.dic[k]
-		return &v
+		return v
 	}
 
-	return nil
+	var noop T
+	return noop
 }
 
 func (s *SortedMap[K, T]) Tail(key K) []K {
-	b := intToBytes(key)
 	for i, v := range s.arr {
-		if bytes.HasSuffix(intToBytes(v), b) {
+		if v > key {
 			return s.arr[i:]
 		}
 	}
